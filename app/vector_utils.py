@@ -1,17 +1,18 @@
-# from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
-# def get_model():
-#     return SentenceTransformer('all-MiniLM-L6-v2')
+model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # def get_embedding(text: str):
-#     model = get_model()
-#     return model.encode([text])[0]
+#     embedding = model.encode(text)
+#     norm = np.linalg.norm(embedding)
+#     return embedding / norm if norm != 0 else embedding
+def get_embedding(text: str):
+    embedding = model.encode(text, normalize_embeddings=False)  # disable internal normalization
+    embedding = np.array(embedding)  # just in case it's a list
+    norm = np.linalg.norm(embedding)
 
-
-from sentence_transformers import SentenceTransformer
-
-# Load model globally to avoid reloading on every request
-model = SentenceTransformer("all-MiniLM-L6-v2")  # You can replace with any other model
-
-def get_embedding(text: str) -> list[float]:
-    return model.encode(text).tolist()
+    if norm == 0 or not np.isfinite(norm):
+        raise ValueError("Embedding norm is zero or invalid. Cannot normalize.")
+    
+    return embedding / norm

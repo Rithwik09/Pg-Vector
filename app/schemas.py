@@ -1,5 +1,8 @@
 from pydantic import BaseModel
 
+class SearchQuery(BaseModel):
+    query: str
+    
 class NoteCreate(BaseModel):
     content: str
 
