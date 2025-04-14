@@ -20,11 +20,17 @@ from app.models import Base, Note  # Ensure Note is imported!
 import os
 
 # Replace with your actual database credentials
-DB_USER = "admin_user"
-DB_PASSWORD = "dbuser123"
-DB_HOST = "localhost"
+# DB_USER = "admin_user"
+# DB_PASSWORD = "dbuser123"
+# DB_HOST = "localhost"
+# DB_PORT = "5432"
+# DB_NAME = "semantic_vector"
+
+DB_USER = "pgvector"
+DB_PASSWORD = "Ranucle!#139"
+DB_HOST = "pgvector-test-instance-1.cncu6qecijbq.us-east-2.rds.amazonaws.com"
 DB_PORT = "5432"
-DB_NAME = "semantic_vector"
+DB_NAME = "pgvector-test"
 
 DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 

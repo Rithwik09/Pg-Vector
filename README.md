@@ -10,3 +10,11 @@ pip install -r requirements.txt
 
 
 uvicorn app.main:app --reload
+
+
+# running the conda env first 
+ open user profile OR where you have created a conda env with local_vector file 
+
+
+ # before installing setup db
+
