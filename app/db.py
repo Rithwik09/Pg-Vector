@@ -26,11 +26,11 @@ import os
 # DB_PORT = "5432"
 # DB_NAME = "semantic_vector"
 
-DB_USER = "pgvector"
-DB_PASSWORD = "Ranucle!#139"
-DB_HOST = "pgvector-test-instance-1.cncu6qecijbq.us-east-2.rds.amazonaws.com"
+DB_USER = "***********"
+DB_PASSWORD = "*****************"
+DB_HOST = "***********************"
 DB_PORT = "5432"
-DB_NAME = "pgvector-test"
+DB_NAME = "********************"
 
 DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
