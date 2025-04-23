@@ -6,6 +6,7 @@ from sqlalchemy import func, cast
 from pgvector.sqlalchemy import Vector
 from app.vector_utils import DocumentProcessor
 from typing import List, Dict
+from app.vector_utils import DocumentChunk  # Ensure DocumentChunk is imported
 
 # Initialize the processor once
 document_processor = DocumentProcessor()
@@ -55,44 +56,96 @@ def create_document(db: Session, doc: schemas.DocumentCreate):
         raise
 
 
-def semantic_search(db: Session, query: str, top_k: int = 5) -> List[Dict[str, str]]:
-    print(f"🔍 Searching for: {query}")
+# def semantic_search(db: Session, query: str, top_k: int = 5) -> List[Dict[str, str]]:
+#     print(f"🔍 Searching for: {query}")
     
-    query_embedding = get_embedding(query)
+#     query_embedding = get_embedding(query)
     
-    if len(query_embedding) != 384:
-        raise ValueError(f"Embedding length is {len(query_embedding)}, expected 384.")
+#     if len(query_embedding) != 768:
+#         raise ValueError(f"Embedding length is {len(query_embedding)}, expected 768.")
 
-    print(f"Query embedding: {query_embedding[:10]}...")  # Shortened for readability
+#     # print(f"Query embedding: {query_embedding[:10]}...")  # Shortened for readability
 
-    # Cast the embedding properly
-    query_embedding_vector = cast(query_embedding, Vector(384))
+#     # Cast the embedding properly for 768-dim vectors
+#     query_embedding_vector = cast(query_embedding, Vector(768))
 
-    score = func.cosine_distance(
-        models.DocumentChunk.embedding,
-        query_embedding_vector
-    ).label("score")
+#     score = func.cosine_distance(
+#         models.DocumentChunk.embedding,
+#         query_embedding_vector
+#     ).label("score")
 
-    results = (
-        db.query(models.DocumentChunk, score)
-        .order_by(score.desc())
-        .limit(top_k)
-        .all()
+#     results = (
+#         db.query(models.DocumentChunk, score)
+#         .order_by(score.desc())
+#         .limit(top_k)
+#         .all()
+#     )
+
+def semantic_search(
+    db: Session,
+    query: str,
+    top_k: int = 5,
+    use_hybrid: bool = False,
+    rerank: bool = True,
+) -> List[Dict[str, float]]:
+    print(f"🔍 semantic_search wrapper looking for: {query}")
+
+    # 1) fetch chunks from the DB
+    db_chunks = (
+        db.query(models.DocumentChunk)
+          .all()
     )
 
-    print("🔎 Results:", [
-        {
-            "content": chunk.content,
-            "score": float(similarity_score)
+    # 2) build your in-memory DocumentChunk list
+    processor_chunks = []
+    for i, db_chunk in enumerate(db_chunks):
+        # assuming embedding is stored as a list of floats in the DB
+        emb = np.array(db_chunk.embedding, dtype=np.float32)
+        metadata = {
+            "source": "db",
+            "chunk_index": i,
+            "document_id": db_chunk.document_id,
         }
-        for chunk, similarity_score in results
-    ])
+        processor_chunks.append(DocumentChunk(db_chunk.content, emb, metadata))
 
+    # 3) call your semantic finder (this will fire your 🔍 and 🐞 prints)
+    if use_hybrid:
+        initial = document_processor.hybrid_search(query, processor_chunks, top_k=top_k)
+    else:
+        initial = document_processor.find_relevant_chunks(query, processor_chunks, top_k=top_k)
+
+    # 4) optionally rerank with Cross-Encoder (this will fire your 🔄 print)
+    if rerank:
+        final = document_processor.rerank_results(query, initial, top_k=top_k)
+    else:
+        final = initial
+
+    # 5) format for your API
+    return [
+        {"content": chunk.content, "score": score}
+        for chunk, score in final
+    ]
+
+def process_search_results(final) -> List[Dict[str, float]]:
     search_results = []
-    for chunk, similarity_score in results:
+
+    # Ensure 'final' is defined before this loop
+    if 'final' not in locals():
+        raise NameError("'final' is not defined. Ensure it is populated before this loop.")
+
+    for chunk, similarity_score in final:
         search_results.append({
             "content": chunk.content,
             "score": float(similarity_score)
         })
 
     return search_results
+
+
+    # print("🔎 Results:", [
+    #     {
+    #         "content": chunk.content,
+    #         "score": float(similarity_score)
+    #     }
+    #     for chunk, similarity_score in results
+    # ])
